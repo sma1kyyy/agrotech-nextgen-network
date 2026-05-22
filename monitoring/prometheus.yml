@@ -1,5 +1,14 @@
 # monitoring/prometheus.yml
 # собирает метрики со всех сервисов стенда
+#
+# в стенде сейчас реально доступны метрики:
+#   prometheus сам (localhost:9090)
+#   node-exporter (host:9100)
+#   onos через rest api /onos/v1/metrics (требует basic auth onos:rocks)
+#
+# отдельные экспортеры (wireguard, frr, blackbox, nginx_stub) не подняты —
+# чтобы не плодить лишние контейнеры в учебном стенде. при желании их можно
+# добавить и расширить prometheus.yml ниже.
 
 global:
   scrape_interval:     15s
@@ -10,8 +19,7 @@ global:
     project: "agrotech-sdn"
     env:     "lab"
 
-rule_files:
-  - "/etc/prometheus/alerts.yml"
+rule_files: []
 
 alerting:
   alertmanagers:
@@ -26,70 +34,13 @@ scrape_configs:
       - targets: ["localhost:9090"]
 
   # хост-машина (cpu, ram, disk, network)
+  # node-exporter в network_mode: host, поэтому из контейнера prometheus
+  # ходим к нему через docker bridge gateway 172.17.0.1
+  # (host.docker.internal на linux не резолвится без extra_hosts)
   - job_name: "node-exporter"
     static_configs:
-      - targets: ["host.docker.internal:9100"]
+      - targets: ["172.17.0.1:9100"]
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
         replacement: "host-machine"
-
-  # onos метрики через встроенный prometheus-экспортер
-  - job_name: "onos"
-    static_configs:
-      - targets: ["10.0.99.2:9091"]
-    metrics_path: "/onos/v1/metrics"
-    basic_auth:
-      username: "onos"
-      password: "rocks"
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: "onos-controller"
-
-  # wireguard экспортер метрик туннеля
-  - job_name: "wireguard"
-    static_configs:
-      - targets: ["10.0.99.30:9586"]
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: "wireguard-datacenter"
-
-  # frr-branch zebra metrics через frr-exporter
-  - job_name: "frr-branch"
-    static_configs:
-      - targets: ["10.0.99.40:9342"]
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: "frr-branch-router"
-
-  # app-server nginx stub_status
-  - job_name: "app-server"
-    static_configs:
-      - targets: ["10.0.99.20:9113"]
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        replacement: "app-server-nginx"
-
-  # blackbox-экспортер для проверки связности (доступность wireguard, frr)
-  - job_name: "blackbox-icmp"
-    metrics_path: "/probe"
-    params:
-      module: [icmp]
-    static_configs:
-      - targets:
-          - "10.0.1.2"   # onos
-          - "10.0.1.30"  # wireguard endpoint
-          - "10.0.2.1"   # frr-branch
-          - "10.13.13.1" # wireguard цод-сторона
-          - "10.13.13.2" # wireguard филиал
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: __param_target
-      - source_labels: [__param_target]
-        target_label: instance
-      - target_label: __address__
-        replacement: "localhost:9115"

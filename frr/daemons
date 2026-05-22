@@ -1,0 +1,51 @@
+# frr/daemons
+# какие демоны frr запускать в контейнере frr-branch
+# zebra обязателен. остальные включены под наш кейс:
+#   staticd  — статические маршруты (4g/спутник с разными метриками)
+#   bfdd     — bfd для быстрого детекта падения nexthop
+#   pbrd     — policy-based routing для приоритезации dscp-трафика
+
+zebra=yes
+bgpd=no
+ospfd=no
+ospf6d=no
+ripd=no
+ripngd=no
+isisd=no
+pimd=no
+ldpd=no
+nhrpd=no
+eigrpd=no
+babeld=no
+sharpd=no
+pbrd=yes
+bfdd=yes
+fabricd=no
+vrrpd=no
+pathd=no
+staticd=yes
+
+# опции для каждого демона (можно оставить по умолчанию)
+zebra_options="  -A 127.0.0.1 -s 90000000"
+bgpd_options="   -A 127.0.0.1"
+ospfd_options="  -A 127.0.0.1"
+ospf6d_options=" -A ::1"
+ripd_options="   -A 127.0.0.1"
+ripngd_options=" -A ::1"
+isisd_options="  -A 127.0.0.1"
+pimd_options="   -A 127.0.0.1"
+ldpd_options="   -A 127.0.0.1"
+nhrpd_options="  -A 127.0.0.1"
+eigrpd_options=" -A 127.0.0.1"
+babeld_options=" -A 127.0.0.1"
+sharpd_options=" -A 127.0.0.1"
+pbrd_options="   -A 127.0.0.1"
+staticd_options="-A 127.0.0.1"
+bfdd_options="   -A 127.0.0.1"
+fabricd_options="-A 127.0.0.1"
+vrrpd_options="  -A 127.0.0.1"
+pathd_options="  -A 127.0.0.1"
+
+# единый сокет управления для vtysh
+vtysh_enable=yes
+zebra_options="  -A 127.0.0.1 -s 90000000"

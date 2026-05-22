@@ -1,0 +1,17 @@
+# monitoring/grafana/provisioning/dashboards/dashboards.yml
+# говорим grafana откуда подгружать json-дашборды при старте
+
+apiVersion: 1
+
+providers:
+  - name: agrotech
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      # этот путь монтируется из docker-compose:
+      # ./monitoring/grafana/dashboard.json -> /var/lib/grafana/dashboards/agrotech.json
+      path: /var/lib/grafana/dashboards

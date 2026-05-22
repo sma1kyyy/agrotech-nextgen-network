@@ -36,7 +36,19 @@ ovs-vsctl --may-exist add-port "$BRIDGE" iot-port \
 ovs-vsctl --may-exist add-port "$BRIDGE" cctv-port \
   -- set Interface cctv-port type=internal
 
-# flow-правила: iot → очередь 2 (высокий приоритет), cctv → очередь 1
+# qos-очереди на uplink-порту (htb с тремя классами)
+# queue 0 best-effort, queue 1 видеопоток (cctv), queue 2 критические iot-данные
+# трафик в очередях ограничен по полосе и приоритезируется htb
+ovs-vsctl -- set Port uplink qos=@qos1 \
+  -- --id=@qos1 create qos type=linux-htb \
+       other-config:max-rate=1000000000 \
+       queues:0=@q0 queues:1=@q1 queues:2=@q2 \
+  -- --id=@q0 create queue other-config:min-rate=100000000 other-config:max-rate=900000000 \
+  -- --id=@q1 create queue other-config:min-rate=400000000 other-config:max-rate=1000000000 \
+  -- --id=@q2 create queue other-config:min-rate=200000000 other-config:max-rate=1000000000 \
+  2>/dev/null || echo "[ovs-branch] qos уже настроен или порт не поддерживает"
+
+# flow-правила: iot (dscp cs6=48) → очередь 2, cctv (rtp udp 5004) → очередь 1
 ovs-ofctl -O OpenFlow13 add-flow "$BRIDGE" \
   "priority=200,ip,nw_tos=48 actions=set_queue:2,output:uplink" 2>/dev/null || true
 

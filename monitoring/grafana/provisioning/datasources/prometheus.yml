@@ -1,0 +1,17 @@
+# monitoring/grafana/provisioning/datasources/prometheus.yml
+# источник данных prometheus автоматически создаётся при старте grafana
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    # prometheus и grafana в одной docker-сети monitoring, разрешим по имени сервиса
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      timeInterval: 15s
+      httpMethod: POST
