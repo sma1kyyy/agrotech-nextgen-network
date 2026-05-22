@@ -49,10 +49,12 @@ services:
       - onos-data:/root/onos/apache-karaf-4.2.14/data
       - ./onos/config/network-cfg.json:/root/onos/config/network-cfg.json:ro
     networks:
-      datacenter:
-        ipv4_address: 10.0.1.2
-      monitoring:
-        ipv4_address: 10.0.99.2
+      - datacenter
+      - monitoring
+      # datacenter:
+      #   ipv4_address: 10.0.1.2
+      # monitoring:
+      #   ipv4_address: 10.0.99.2
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8181/onos/v1/devices",
              "-u", "onos:rocks"]
@@ -75,8 +77,8 @@ services:
       - /lib/modules:/lib/modules:ro
       - ./ovs/setup.sh:/setup.sh:ro
     networks:
-      datacenter:
-        ipv4_address: 10.0.1.10
+      - datacenter
+        # ipv4_address: 10.0.1.10
     depends_on:
       onos:
         condition: service_healthy
@@ -87,7 +89,7 @@ services:
                      --pidfile --detach &&
         ovs-vsctl --no-wait init &&
         ovs-vswitchd --pidfile --detach &&
-        bash /setup.sh ovs1 10.0.1.2 6653 &&
+        bash /setup.sh ovs1 onos 6653 &&
         tail -f /dev/null
       "
 
@@ -105,8 +107,8 @@ services:
       - /lib/modules:/lib/modules:ro
       - ./ovs/setup.sh:/setup.sh:ro
     networks:
-      datacenter:
-        ipv4_address: 10.0.1.11
+      - datacenter
+        # ipv4_address: 10.0.1.11
     depends_on:
       onos:
         condition: service_healthy
@@ -117,7 +119,7 @@ services:
                      --pidfile --detach &&
         ovs-vsctl --no-wait init &&
         ovs-vswitchd --pidfile --detach &&
-        bash /setup.sh ovs2 10.0.1.2 6653 &&
+        bash /setup.sh ovs2 onos 6653 &&
         tail -f /dev/null
       "
 
@@ -166,10 +168,12 @@ services:
     ports:
       - "51820:51820/udp"
     networks:
-      datacenter:
-        ipv4_address: 10.0.1.30
-      monitoring:
-        ipv4_address: 10.0.99.30
+      - datacenter
+      - monitoring
+      # datacenter:
+      #   ipv4_address: 10.0.1.30
+      # monitoring:
+      #   ipv4_address: 10.0.99.30
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
 
@@ -188,10 +192,12 @@ services:
       - ./frr/daemons:/etc/frr/daemons:ro
       - ./frr/vtysh.conf:/etc/frr/vtysh.conf:ro
     networks:
-      branch:
-        ipv4_address: 10.0.2.1
-      monitoring:
-        ipv4_address: 10.0.99.40
+      - branch
+      - monitoring
+      # branch:
+      #   ipv4_address: 10.0.2.1
+      # monitoring:
+      #   ipv4_address: 10.0.99.40
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.forwarding=1
@@ -210,8 +216,9 @@ services:
       - /lib/modules:/lib/modules:ro
       - ./ovs/setup-branch.sh:/setup.sh:ro
     networks:
-      branch:
-        ipv4_address: 10.0.2.10
+      - branch
+      # branch:
+      #   ipv4_address: 10.0.2.10
     depends_on:
       - frr-branch
     command: >
@@ -235,8 +242,8 @@ services:
     volumes:
       - ./iot/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     networks:
-      branch:
-        ipv4_address: 10.0.2.20
+      - branch
+        # ipv4_address: 10.0.2.20
     ports:
       - "1883:1883"   # mqtt
 
@@ -248,8 +255,8 @@ services:
     hostname: cctv-sim
     restart: unless-stopped
     networks:
-      branch:
-        ipv4_address: 10.0.2.21
+      - branch
+        # ipv4_address: 10.0.2.21
     entrypoint: >
       sh -c "
         sleep 10 &&
@@ -276,8 +283,8 @@ services:
     ports:
       - "9090:9090"
     networks:
-      monitoring:
-        ipv4_address: 10.0.99.10
+      - monitoring
+        # ipv4_address: 10.0.99.10
 
   # grafana дашборды и визуализация
   # ui: http://localhost:3000  login: admin / admin
@@ -299,8 +306,8 @@ services:
     ports:
       - "3000:3000"
     networks:
-      monitoring:
-        ipv4_address: 10.0.99.11
+      - monitoring
+        # ipv4_address: 10.0.99.11
     depends_on:
       - prometheus
 
