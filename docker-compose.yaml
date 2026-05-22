@@ -36,7 +36,6 @@ services:
   # ui: http://localhost:8181/onos/ui  login: onos / rocks
   onos:
     image: onosproject/onos:2.7-latest
-    container_name: onos
     hostname: onos
     restart: unless-stopped
     environment:
@@ -64,7 +63,7 @@ services:
   # ovs-1 — первый программный коммутатор цод (data plane)
   # подключается к onos через openflow 1.3
   ovs1:
-    image: openvswitch/ovs:3.3
+    image: openvswitch/ovs:2.11.2_debian
     container_name: ovs1
     hostname: ovs1
     restart: unless-stopped
@@ -94,7 +93,7 @@ services:
 
   # ovs-2 второй программный коммутатор цод
   ovs2:
-    image: openvswitch/ovs:3.3
+    image: openvswitch/ovs:2.11.2_debian
     container_name: ovs2
     hostname: ovs2
     restart: unless-stopped
@@ -176,7 +175,7 @@ services:
 
   # frr-branch маршрутизатор филиала с failover 4g/спутник
   frr-branch:
-    image: frrouting/frr:v9.1.1
+    image: quay.io/frrouting/frr:9.1.1
     container_name: frr-branch
     hostname: frr-branch
     restart: unless-stopped
@@ -199,7 +198,7 @@ services:
 
   # ovs-branch — коммутатор в филиале (iot + cctv)
   ovs-branch:
-    image: openvswitch/ovs:3.3
+    image: openvswitch/ovs:2.11.2_debian
     container_name: ovs-branch
     hostname: ovs-branch
     restart: unless-stopped
