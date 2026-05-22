@@ -1,0 +1,142 @@
+{
+    "devices": {
+        "of:0000000000000001": {
+            "basic": {
+                "name": "ovs1-datacenter",
+                "latitude": 55.75,
+                "longitude": 37.61,
+                "driver": "ovs"
+            },
+            "ports": {
+                "1": {
+                    "interfaces": [
+                        {
+                            "name": "to-ovs2",
+                            "ips": []
+                        }
+                    ]
+                },
+                "2": {
+                    "interfaces": [
+                        {
+                            "name": "to-app-server",
+                            "ips": []
+                        }
+                    ]
+                },
+                "3": {
+                    "interfaces": [
+                        {
+                            "name": "to-wireguard",
+                            "ips": []
+                        }
+                    ]
+                }
+            }
+        },
+        "of:0000000000000002": {
+            "basic": {
+                "name": "ovs2-datacenter",
+                "latitude": 55.75,
+                "longitude": 37.62,
+                "driver": "ovs"
+            },
+            "ports": {
+                "1": {
+                    "interfaces": [
+                        {
+                            "name": "to-ovs1",
+                            "ips": []
+                        }
+                    ]
+                },
+                "2": {
+                    "interfaces": [
+                        {
+                            "name": "to-monitoring",
+                            "ips": []
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "hosts": {
+        "00:00:00:00:01:01/-1": {
+            "basic": {
+                "name": "app-server",
+                "ips": [
+                    "10.0.1.20"
+                ],
+                "location": "of:0000000000000001/2"
+            }
+        },
+        "00:00:00:00:01:02/-1": {
+            "basic": {
+                "name": "wireguard-endpoint",
+                "ips": [
+                    "10.0.1.30"
+                ],
+                "location": "of:0000000000000001/3"
+            }
+        }
+    },
+    "apps": {
+        "org.onosproject.core": {
+            "core": {
+                "linkDiscoveryMode": "STRICT"
+            }
+        },
+        "org.onosproject.fwd": {
+            "fwd": {
+                "packetOutOnly": false
+            }
+        }
+    },
+    "links": {
+        "of:0000000000000001/1-of:0000000000000002/1": {
+            "basic": {
+                "bandwidth": 10000,
+                "metric": 1
+            }
+        }
+    },
+    "ports": {
+        "of:0000000000000001/1": {
+            "interfaces": [
+                {
+                    "name": "trunk-to-ovs2",
+                    "vlanTagged": [
+                        100,
+                        200,
+                        300
+                    ]
+                }
+            ]
+        }
+    },
+    "layouts": {
+        "root": {
+            "devices": {
+                "of:0000000000000001": {
+                    "x": 200,
+                    "y": 200
+                },
+                "of:0000000000000002": {
+                    "x": 400,
+                    "y": 200
+                }
+            },
+            "hosts": {
+                "00:00:00:00:01:01/-1": {
+                    "x": 150,
+                    "y": 350
+                },
+                "00:00:00:00:01:02/-1": {
+                    "x": 250,
+                    "y": 350
+                }
+            }
+        }
+    }
+}
