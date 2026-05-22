@@ -261,6 +261,121 @@ bash tests/failover.sh
 покажет 4 шага: исходное состояние → имитация падения 4G → ping через резерв → восстановление.
 ожидаемый результат: 2 маршрута → 1 маршрут → 2 маршрута
 
+### ручная приёмка по командам
+
+шаг 0. стенд поднят
+```bash
+# 0.1 показать, что все 15 сервисов в running
+docker compose ps
+# ожидаем: 15 строк, все в статусе Up
+
+# 0.2 показать, что docker-сети созданы (архитектура: 4 плоскости трафика)
+docker network ls | grep agrotech-nextgen-network_
+# ожидаем: branch, datacenter, monitoring, remote-users
+```
+
+A. безопасный доступ к приложениям в цод для филиала (wireguard)
+```bash
+# A.1 сервер wireguard в цод слушает 51820 и видит peer-а филиала
+docker exec wireguard wg show
+# что доказываем: listening port: 51820 + строка peer: <ключ> + latest handshake
+
+# A.2 филиал поднял туннель wg0 и установил handshake
+docker exec wireguard-branch wg show
+# что доказываем: interface: wg0 + latest handshake N seconds ago
+
+# A.3 трафик из филиала к цоду реально проходит через шифрованный туннель
+docker exec wireguard-branch ping -c 3 10.13.13.1
+# что доказываем: 0% packet loss — связь по wg есть
+```
+
+B. безопасный доступ к приложениям в цод для удалённых сотрудников (tailscale)
+```bash
+# B.1 контейнер tailscale запущен и настроен на анонс подсети цод
+docker inspect tailscale --format '{{.State.Running}} {{.Config.Env}}'
+# что доказываем: Running=true + строка --advertise-routes=10.0.1.0/24
+
+# B.2 tailscale обращается к управляющей плоскости
+docker logs tailscale 2>&1 | grep -E 'control:|login|register|auth' | tail -5
+# что доказываем: есть строки auth/login/register/control — оверлей живой
+```
+
+C. приоритизация трафика видеоконференций (qos)
+```bash
+# C.1 на ovs-branch созданы htb-очереди для трёх классов трафика
+docker exec ovs-branch ovs-vsctl list qos
+# что доказываем: type: linux-htb + queues: {0=..., 1=..., 2=...}
+
+# C.2 openflow-правила маркируют трафик в нужные очереди
+docker exec ovs-branch ovs-ofctl -O OpenFlow13 dump-flows ovs-branch
+# что доказываем: есть правила с set_queue:1 (видео rtp:5004) и set_queue:2 (iot dscp 48)
+
+# C.3 frr-branch имеет policy-based routing по dscp-меткам
+docker exec frr-branch vtysh -c "show running-config" | grep -E 'pbr-map|match dscp'
+# что доказываем: есть pbr-map PRIORITY-TRAFFIC + match dscp 48 и 34
+```
+
+D. отказоустойчивость каналов связи филиала (4G + спутник)
+```bash
+# D.1 frr имеет 2 маршрута к цоду с разной distance
+docker exec frr-branch vtysh -c "show ip route 10.0.1.0/24"
+# что доказываем:
+#   distance 10, ... best  ← основной (4G), активный
+#   distance 100, ...      ← резервный (спутник), в резерве
+
+# D.2 имитация падения 4G — удаляем основной next-hop
+docker exec frr-branch vtysh -c "configure terminal" -c "no ip route 10.0.1.0/24 10.0.2.31 10" -c "end"
+docker exec frr-branch vtysh -c "show ip route 10.0.1.0/24"
+# что доказываем: остался только маршрут с distance 100 — failover отработал
+
+# D.3 связь по резерву работает (ping не теряется)
+docker exec wireguard-branch ping -c 3 10.13.13.1
+# что доказываем: трафик идёт через резервный канал
+
+# D.4 восстанавливаем основной канал
+docker exec frr-branch vtysh -c "configure terminal" -c "ip route 10.0.1.0/24 10.0.2.31 10" -c "end"
+docker exec frr-branch vtysh -c "show ip route 10.0.1.0/24"
+# что доказываем: снова 2 маршрута, основной снова best
+```
+
+E. sdn в цод (onos + openflow 1.3)
+```bash
+# E.1 контроллер onos поднят и доступен по rest api
+curl -s -u onos:rocks http://localhost:8181/onos/v1/devices | head -c 400
+# что доказываем: json с двумя устройствами of:000...01 и of:000...02
+
+# E.2 ovs-коммутаторы привязаны к контроллеру onos по tcp
+docker exec ovs1 ovs-vsctl get-controller ovs1
+docker exec ovs2 ovs-vsctl get-controller ovs2
+# что доказываем: оба возвращают tcp:10.0.1.2:6653 (или tcp:onos:6653)
+
+# E.3 (опционально) посмотреть устройства глазами в ui
+# открыть в браузере http://localhost:8181/onos/ui  логин onos / пароль rocks
+```
+
+G. демонстрация работоспособности
+```bash
+# G.1 приложение в цод доступно
+curl -s http://localhost:8080/health
+# что доказываем: ответ ok
+
+# G.2 наблюдаемость: grafana загрузила наш дашборд
+curl -s -u admin:admin 'http://localhost:3000/api/search?type=dash-db'
+# что доказываем: json со словом agrotech / АгроТех
+# или открыть в браузере http://localhost:3000  admin / admin
+
+# G.3 мониторинг: prometheus собирает метрики
+curl -s 'http://localhost:9090/api/v1/targets?state=active' | grep -oE '"health":"[a-z]+"'
+# что доказываем: минимум 2 строки "health":"up"
+# или открыть в браузере http://localhost:9090/targets
+```
+
+или одной строкой запустить всё через автотест
+```bash
+bash tests/acceptance.sh   # 15 пунктов с подробным выводом
+bash tests/failover.sh     # 4-шаговая демонстрация отказоустойчивости
+```
+
 ## запуск containernet демо
 ```bash
 docker exec -it containernet python3 /topology.py
